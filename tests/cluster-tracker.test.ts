@@ -85,6 +85,28 @@ describe('ClusterTracker', () => {
     expect(ev2.died).toHaveLength(0);
   });
 
+  it('equal-overlap merge takes the lower prev id even when prev order is reversed', () => {
+    const t = new ClusterTracker(96, 96);
+    const a: [number, number][] = [[10, 10], [11, 10]];
+    const b: [number, number][] = [[20, 10], [21, 10]];
+    const ev1 = t.update(cells([...a, ...b]));
+    expect(ev1.born).toHaveLength(2);
+    const idA = ev1.born.find(m => m.centroid.x === 10.5)!.id;
+    const idB = ev1.born.find(m => m.centroid.x === 20.5)!.id;
+    // Tick 2: same clusters, but b's cells listed first so the tracker's
+    // internal prev map is rebuilt with the higher id inserted first.
+    const ev2 = t.update(cells([...b, ...a]));
+    expect(ev2.updated).toHaveLength(2);
+    // Tick 3: one bridged group overlapping both prevs equally (2 cells each).
+    const bridged: [number, number][] = [
+      [10, 10], [11, 10], [13, 10], [15, 10], [17, 10], [19, 10], [20, 10], [21, 10],
+    ];
+    const ev3 = t.update(cells(bridged));
+    expect(ev3.updated).toHaveLength(1);
+    expect(ev3.updated[0].id).toBe(Math.min(idA, idB));
+    expect(ev3.died).toEqual([Math.max(idA, idB)]);
+  });
+
   it('tracks a mover via velocity', () => {
     const t = new ClusterTracker(96, 96);
     const id = t.update(cells([[10, 10], [11, 10], [12, 10]])).born[0].id;

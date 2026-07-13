@@ -114,7 +114,12 @@ export class ClusterTracker {
       for (const [id, p] of this.prev) {
         let overlap = 0;
         for (const k of g.keys) if (p.keys.has(k)) overlap++;
-        if (overlap > 0 && (!best || overlap > best.overlap)) best = { id, overlap };
+        if (
+          overlap > 0 &&
+          (!best || overlap > best.overlap || (overlap === best.overlap && id < best.id))
+        ) {
+          best = { id, overlap };
+        }
       }
       g.claim = best?.id ?? null;
     }
@@ -126,7 +131,7 @@ export class ClusterTracker {
       for (const [id, p] of this.prev) {
         if (groups.some(o => o.claim === id)) continue;
         const d = Math.hypot(g.centroid.x - p.centroid.x, g.centroid.y - p.centroid.y);
-        if (d <= 3 && (!best || d < best.d)) best = { id, d };
+        if (d <= 3 && (!best || d < best.d || (d === best.d && id < best.id))) best = { id, d };
       }
       if (best) g.claim = best.id;
     }
