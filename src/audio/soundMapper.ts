@@ -3,7 +3,7 @@ import type { Cell } from '../engine/life';
 import type { ClusterEvents, ClusterMetrics } from '../tracker/cluster';
 import { cellRadial } from '../geometry';
 import { KEYS, midiToFreq, quantize, type KeyName, type ScaleName } from './scale';
-import { allocateVoices, planPings } from './allocation';
+import { allocateVoices, orphanedVoiceIds, planPings } from './allocation';
 
 const PAD_BASE_MIDI = 48; // C3
 const PING_BASE_MIDI = 72; // C5, two octaves above the pad register
@@ -77,6 +77,7 @@ export class SoundMapper {
   private anchorGain!: Tone.Gain;
   private pads = new Map<number, PadVoice>();
   private ready = false;
+  private masterDb = -6;
 
   async init(): Promise<void> {
     this.limiter = new Tone.Limiter(-3).toDestination();
@@ -98,6 +99,7 @@ export class SoundMapper {
     this.anchorFifth = new Tone.Oscillator(midiToFreq(43), 'triangle')
       .connect(this.anchorGain)
       .start();
+    Tone.getDestination().volume.value = this.masterDb;
     this.ready = true;
   }
 
@@ -112,7 +114,8 @@ export class SoundMapper {
   }
 
   setMasterVolume(db: number): void {
-    Tone.getDestination().volume.rampTo(db, 0.1);
+    this.masterDb = db;
+    if (this.ready) Tone.getDestination().volume.rampTo(db, 0.1);
   }
 
   handleTick(
@@ -156,6 +159,14 @@ export class SoundMapper {
       }
       const freq = quantize(m.radial, this.key, this.scale, PAD_BASE_MIDI, 2);
       voice.apply(m, freq, isNew ? 2 : Math.max(0.1, tickSec * 0.9));
+    }
+
+    // Reconcile any pad whose cluster vanished without a `died` event (e.g.
+    // erased or merged away during paused edits): release true orphans only.
+    const liveIds = new Set(active.map(m => m.id));
+    for (const id of orphanedVoiceIds(this.pads.keys(), liveIds)) {
+      this.pads.get(id)?.release();
+      this.pads.delete(id);
     }
 
     // 3. Harmonic anchor: sounds whenever anything is alive.

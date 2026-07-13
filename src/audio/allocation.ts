@@ -26,6 +26,13 @@ export function planPings(
   }));
 }
 
+export function orphanedVoiceIds(
+  voiceIds: Iterable<number>,
+  liveIds: ReadonlySet<number>,
+): number[] {
+  return [...voiceIds].filter(id => !liveIds.has(id));
+}
+
 export function allocateVoices(
   clusters: { id: number; cellCount: number }[],
   maxVoices = 16,

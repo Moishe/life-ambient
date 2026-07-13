@@ -20,3 +20,6 @@ Run `npm run dev`, open the URL, click "tap to start audio". Then verify:
 10. **Clear**: all sound fades out over a few seconds; no stuck voices.
 11. **Rate**: sweep speed 1-8 gen/s; pings track the new pulse.
 12. **Volume**: slider attenuates smoothly; ducking still works.
+13. **No stuck voices after paused edits**: while a pad is sounding, pause,
+    paint over that cluster's cells to erase it, then press Clear (or play);
+    the pad fades out within a few seconds — nothing drones on.

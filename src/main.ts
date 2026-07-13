@@ -1,6 +1,6 @@
 import * as Tone from 'tone';
 import { LifeEngine } from './engine/life';
-import { placePattern, rotateCells, type Pattern } from './engine/patterns';
+import { placePattern, rotateCells } from './engine/patterns';
 import { ClusterTracker } from './tracker/cluster';
 import { SoundMapper } from './audio/soundMapper';
 import { Renderer } from './ui/renderer';

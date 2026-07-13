@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { planPings, allocateVoices } from '../src/audio/allocation';
+import { planPings, allocateVoices, orphanedVoiceIds } from '../src/audio/allocation';
 
 const births = (n: number) => Array.from({ length: n }, (_, i) => ({ x: i, y: 0 }));
 
@@ -60,5 +60,23 @@ describe('allocateVoices', () => {
     const clusters = [{ id: 1, cellCount: 1 }, { id: 2, cellCount: 9 }];
     allocateVoices(clusters, 1);
     expect(clusters[0].id).toBe(1);
+  });
+});
+
+describe('orphanedVoiceIds', () => {
+  it('returns nothing for an empty voice set', () => {
+    expect(orphanedVoiceIds([], new Set([1, 2]))).toEqual([]);
+  });
+
+  it('returns nothing when every voice is live', () => {
+    expect(orphanedVoiceIds([1, 2, 3], new Set([1, 2, 3]))).toEqual([]);
+  });
+
+  it('returns exactly the non-live voice ids', () => {
+    expect(orphanedVoiceIds([1, 2, 3, 4], new Set([2, 4]))).toEqual([1, 3]);
+  });
+
+  it('returns all voice ids when nothing is live', () => {
+    expect(orphanedVoiceIds([5, 6, 7], new Set<number>())).toEqual([5, 6, 7]);
   });
 });

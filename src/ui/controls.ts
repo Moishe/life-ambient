@@ -97,6 +97,8 @@ export function buildControls(
   volume.value = '-6';
   volume.addEventListener('input', () => cb.onVolumeChange(Number(volume.value)));
   controlsRoot.appendChild(labeled('volume', volume));
+  // Sync UI and mapper state from construction (before any slider touch).
+  cb.onVolumeChange(Number(volume.value));
 
   const clearBtn = document.createElement('button');
   clearBtn.textContent = 'Clear';
