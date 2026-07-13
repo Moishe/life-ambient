@@ -163,3 +163,34 @@ startBtn.addEventListener('click', () => {
 document.addEventListener('click', () => {
   if (Tone.getContext().state !== 'running') void Tone.start();
 });
+
+// --- on-screen diagnostics (?debug) ---
+
+if (new URLSearchParams(location.search).has('debug')) {
+  const panel = document.createElement('pre');
+  panel.style.cssText =
+    'position:fixed;bottom:8px;left:8px;z-index:99;background:rgba(11,14,20,0.85);' +
+    'color:#7aa2f7;font:11px/1.5 monospace;padding:8px 10px;border:1px solid #232936;' +
+    'border-radius:8px;pointer-events:none;max-width:80vw;white-space:pre-wrap;';
+  document.body.appendChild(panel);
+  const errors: string[] = [];
+  const note = (msg: unknown) => {
+    errors.push(String(msg));
+    if (errors.length > 3) errors.shift();
+  };
+  window.addEventListener('error', e => note(e.message));
+  window.addEventListener('unhandledrejection', e => note(e.reason));
+  setInterval(() => {
+    const ctx = Tone.getContext();
+    panel.textContent = [
+      `audio state: ${ctx.state}`,
+      `sample rate: ${ctx.sampleRate}`,
+      `tone now: ${Tone.now().toFixed(1)}`,
+      `transport: ${Tone.getTransport().state}`,
+      `population: ${engine.population()}`,
+      `dest volume: ${Tone.getDestination().volume.value.toFixed(1)} dB`,
+      `dest muted: ${Tone.getDestination().mute}`,
+      errors.length ? `errors: ${errors.join(' | ')}` : 'errors: none',
+    ].join('\n');
+  }, 500);
+}
