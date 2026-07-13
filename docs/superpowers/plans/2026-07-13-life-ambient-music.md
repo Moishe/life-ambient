@@ -10,7 +10,7 @@
 
 **Spec:** `docs/superpowers/specs/2026-07-13-life-ambient-music-design.md` — read it before starting any task.
 
-**Model guidance (per user preference, execute tasks with less-expensive models):** Tasks 1, 6, 7, 12 → Haiku. Tasks 2, 3, 4, 9, 10 → Sonnet. Tasks 5, 8, 11 → Opus (trickiest logic/wiring). All code is given in full below, so the executing model mostly transcribes, runs, and verifies.
+**Model guidance (per user preference):** Do not execute tasks with Fable — it plans and reviews only. Correctness and maintainability outrank cost, so default to **Opus** for tasks with real logic or integration risk (Tasks 5, 8, 11) and **Sonnet** for the rest (Tasks 1–4, 6, 7, 9, 10, 12), which are fully specified below with complete code and tests. Escalate any task to Opus if its first attempt fails review.
 
 ## Global Constraints
 
