@@ -14,8 +14,8 @@ export function planPings(
   const overflow = births.length > maxPings;
   let chosen = births;
   if (overflow) {
-    const stride = births.length / maxPings;
-    chosen = Array.from({ length: maxPings }, (_, i) => births[Math.floor(i * stride)]);
+    const step = (births.length - 1) / (maxPings - 1);
+    chosen = Array.from({ length: maxPings }, (_, i) => births[Math.round(i * step)]);
   }
   const n = chosen.length;
   return chosen.map((b, i) => ({

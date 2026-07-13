@@ -29,6 +29,14 @@ describe('planPings', () => {
     expect(plans[1].velocity).toBe(0.25);
   });
 
+  it('samples across the full range at the overflow boundary (n = 13)', () => {
+    const plans = planPings(births(13));
+    expect(plans).toHaveLength(12);
+    expect(plans[0].x).toBe(0);          // first birth included
+    expect(plans[11].x).toBe(12);        // last birth included
+    expect(new Set(plans.map(p => p.x)).size).toBe(12); // all distinct
+  });
+
   it('uses normal velocity without overflow', () => {
     expect(planPings(births(12)).every(p => p.velocity === 0.25)).toBe(true);
   });
