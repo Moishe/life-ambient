@@ -78,6 +78,10 @@ class Recorder {
   `new Blob(chunks, { type: mimeType })`. Resolves even if the chunk list
   is tiny (instant record→stop still yields a file). Resets state so the
   recorder is reusable.
+- On finalize, stop only the **video** track (fresh per `start()`). The
+  audio track belongs to SoundMapper's cached `MediaStreamAudioDestinationNode`
+  and is reused by later recordings — stopping it would permanently kill
+  audio capture.
 - `onerror` on the MediaRecorder: finalize the chunks captured so far into
   a result and flip `isRecording` to false. If a `stop()` call is pending,
   it resolves with that result; otherwise the result is held and the next
@@ -116,9 +120,11 @@ A record button in the transport group, same pattern as the play button:
 - Construct `const recorder = new Recorder(canvas, () => sound.captureStream())`.
 - `onRecordToggle`:
   - If unsupported → no-op (button is disabled anyway).
-  - If audio isn't started yet, run the same audio-start path as the gate
-    (await `Tone.start()` / mapper init) before starting the recorder —
-    pressing record must never capture a dead audio track.
+  - Audio is guaranteed live: the `#gate` overlay covers the whole UI
+    (`position: fixed; inset: 0`) until `Tone.start()` + `mapper.init()`
+    complete, so the record button cannot be pressed before the audio
+    graph exists. `captureStream()` still throws if called pre-init, as a
+    defensive invariant.
   - Start: `recorder.start()`, begin a 1 s interval updating the button
     label with `■ ${formatElapsed(recorder.elapsedSec)}`.
   - Stop: clear the interval, `await recorder.stop()`, then download:
@@ -147,7 +153,8 @@ A record button in the transport group, same pattern as the play button:
 Per project philosophy, pure logic gets Vitest; browser/Tone layers get
 manual smoke checks.
 
-- **Unit (`src/recording/format.test.ts`):** mime preference order (MP4
+- **Unit (`tests/recording-format.test.ts`, following the project's
+  `tests/` convention):** mime preference order (MP4
   wins when supported; correct WebM fallback; `null` when nothing matches);
   filename extension follows mime family; filename zero-padding with a
   fixed `Date`; `formatElapsed` (0 → `0:00`, 67 → `1:07`, 600 → `10:00`).
@@ -159,8 +166,8 @@ manual smoke checks.
   4. Elapsed timer counts up on the button; button shows recording state.
   5. Pause mid-recording → resulting video holds the frame while audio
      fades, then resumes on play.
-  6. Record before ever starting audio → audio starts, recording includes
-     sound from the first second.
+  6. Record → stop → record again → stop: the second file also has audio
+     (the shared audio capture node survives the first recording).
 
 ## Out of scope
 
