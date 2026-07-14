@@ -153,6 +153,7 @@ export class SoundMapper {
   private arpJitterPct = 1;
   private ready = false;
   private masterDb = -6;
+  private streamDest: MediaStreamAudioDestinationNode | null = null;
 
   async init(): Promise<void> {
     this.limiter = new Tone.Limiter(-3).toDestination();
@@ -192,6 +193,21 @@ export class SoundMapper {
   setMasterVolume(db: number): void {
     this.masterDb = db;
     if (this.ready) Tone.getDestination().volume.rampTo(db, 0.1);
+  }
+
+  /**
+   * Audio stream of the mastered mix (post-limiter), for recording.
+   * The node is created once and cached: its single audio track is shared
+   * with every recording, so callers must never stop() that track.
+   */
+  captureStream(): MediaStream {
+    if (!this.ready) throw new Error('captureStream() before init()');
+    if (!this.streamDest) {
+      const raw = Tone.getContext().rawContext as AudioContext;
+      this.streamDest = raw.createMediaStreamDestination();
+      this.limiter.connect(this.streamDest);
+    }
+    return this.streamDest.stream;
   }
 
   setArpVolume(db: number): void {
