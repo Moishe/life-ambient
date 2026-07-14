@@ -21,6 +21,7 @@ export class Renderer {
   private flashes: Spark[] = [];
   private fades: Spark[] = [];
   private preview: Cell[] | null = null;
+  private arpIds: ReadonlySet<number> = new Set();
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -35,6 +36,10 @@ export class Renderer {
 
   setClusters(clusters: ClusterMetrics[]): void {
     this.clusters = clusters;
+  }
+
+  setArpIds(ids: ReadonlySet<number>): void {
+    this.arpIds = ids;
   }
 
   noteBirths(cells: Cell[], t: number): void {
@@ -63,8 +68,15 @@ export class Renderer {
     }
 
     for (const cl of this.clusters) {
-      ctx.fillStyle = `hsl(${clusterHue(cl.id)} 60% 62%)`;
-      for (const c of cl.cells) this.cellRect(c.x, c.y);
+      const hue = clusterHue(cl.id);
+      if (this.arpIds.has(cl.id)) {
+        ctx.strokeStyle = `hsl(${hue} 70% 65%)`;
+        ctx.lineWidth = 1.5;
+        for (const c of cl.cells) this.cellStroke(c.x, c.y);
+      } else {
+        ctx.fillStyle = `hsl(${hue} 60% 62%)`;
+        for (const c of cl.cells) this.cellRect(c.x, c.y);
+      }
     }
 
     this.flashes = this.flashes.filter(f => t - f.t0 < FLASH_MS);
@@ -91,6 +103,12 @@ export class Renderer {
     if (x < 0 || y < 0 || x >= this.gridW || y >= this.gridH) return;
     const p = this.cellPx;
     this.ctx.fillRect(x * p + 0.5, y * p + 0.5, p - 1, p - 1);
+  }
+
+  private cellStroke(x: number, y: number): void {
+    if (x < 0 || y < 0 || x >= this.gridW || y >= this.gridH) return;
+    const p = this.cellPx;
+    this.ctx.strokeRect(x * p + 1.25, y * p + 1.25, p - 2.5, p - 2.5);
   }
 
   private drawRings(): void {
