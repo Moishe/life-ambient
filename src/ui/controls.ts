@@ -39,6 +39,10 @@ export function buildControls(
 ): {
   setPlaying(playing: boolean): void;
   setRecordState(state: { recording: boolean; label: string; enabled: boolean }): void;
+  setRate(gps: number): void;
+  setKey(key: KeyName): void;
+  setScale(scale: ScaleName): void;
+  setVolume(db: number): void;
 } {
   // --- palette ---
   const buttons: HTMLButtonElement[] = [];
@@ -50,6 +54,7 @@ export function buildControls(
 
   const paintBtn = document.createElement('button');
   paintBtn.textContent = 'Paint cells';
+  paintBtn.classList.add('tool');
   paintBtn.addEventListener('click', () => select(paintBtn, { kind: 'paint' }));
   paletteRoot.appendChild(paintBtn);
   buttons.push(paintBtn);
@@ -61,6 +66,7 @@ export function buildControls(
     for (const pattern of PATTERNS.filter(p => p.category === category)) {
       const btn = document.createElement('button');
       btn.textContent = pattern.name;
+      btn.classList.add('tool');
       btn.addEventListener('click', () => select(btn, { kind: 'pattern', pattern }));
       paletteRoot.appendChild(btn);
       buttons.push(btn);
@@ -130,6 +136,20 @@ export function buildControls(
       recordBtn.title = state.enabled ? '' : 'Recording is not supported in this browser';
       recordBtn.classList.toggle('recording', state.recording);
     },
+    // Setters below write element values only; they never fire callbacks
+    // (applyWorld already updates the mapper — firing would double-apply).
+    setRate(gps: number) {
+      rate.value = String(gps);
+    },
+    setKey(key: KeyName) {
+      keySelect.value = key;
+    },
+    setScale(scale: ScaleName) {
+      scaleSelect.value = scale;
+    },
+    setVolume(db: number) {
+      volume.value = String(db);
+    },
   };
 }
 
@@ -156,7 +176,15 @@ const ARP_INSTRUMENT_LABELS: Record<ArpInstrument, string> = {
 export function buildArpPanel(
   root: HTMLElement,
   cb: ArpPanelCallbacks,
-): { setMode(active: boolean): void } {
+): {
+  setMode(active: boolean): void;
+  setSettings(s: {
+    db: number;
+    maxNotes: number;
+    instrument: ArpInstrument;
+    jitterPct: number;
+  }): void;
+} {
   const heading = document.createElement('h3');
   heading.textContent = 'Arpeggios';
   root.appendChild(heading);
@@ -211,6 +239,18 @@ export function buildArpPanel(
       toggle.classList.toggle('active', active);
       toggle.textContent = active ? 'Arpeggio mode: ON' : 'Arpeggio mode';
     },
+    // Element values only — never fires callbacks (applyWorld drives the mapper).
+    setSettings(s: {
+      db: number;
+      maxNotes: number;
+      instrument: ArpInstrument;
+      jitterPct: number;
+    }) {
+      volume.value = String(s.db);
+      maxNotes.value = String(s.maxNotes);
+      instrument.value = s.instrument;
+      jitter.value = String(s.jitterPct);
+    },
   };
 }
 
@@ -221,4 +261,111 @@ function stacked(text: string, el: HTMLElement): HTMLLabelElement {
   span.textContent = text;
   label.append(span, el);
   return label;
+}
+
+// Plain data shape so controls.ts never imports from src/world (UI-layer rule).
+export interface MoodButton {
+  id: string;
+  name: string;
+  tagline: string;
+}
+
+export function buildMoodPanel(
+  root: HTMLElement,
+  moods: readonly MoodButton[],
+  cb: { onMood(id: string): void },
+): { setActiveMood(id: string | null): void; setPendingMood(id: string | null): void } {
+  const heading = document.createElement('h3');
+  heading.textContent = 'Moods';
+  root.appendChild(heading);
+  const buttons = new Map<string, HTMLButtonElement>();
+  for (const mood of moods) {
+    const btn = document.createElement('button');
+    btn.textContent = mood.name;
+    btn.title = mood.tagline;
+    btn.classList.add('mood');
+    btn.addEventListener('click', () => cb.onMood(mood.id));
+    root.appendChild(btn);
+    buttons.set(mood.id, btn);
+  }
+
+  return {
+    // Element state only — never fires callbacks.
+    setActiveMood(id: string | null) {
+      for (const [moodId, btn] of buttons) btn.classList.toggle('active', moodId === id);
+    },
+    // Marks a mood as mid-transition (the board is clearing/fading before the
+    // new world lands). Toggles the breathing 'pending' pulse; fires no callback.
+    setPendingMood(id: string | null) {
+      for (const [moodId, btn] of buttons) btn.classList.toggle('pending', moodId === id);
+    },
+  };
+}
+
+export interface WorldPanelCallbacks {
+  onSaveRequest(name: string): void;
+  onLoadRequest(name: string): void;
+  onDeleteRequest(name: string): void;
+  onShareRequest(): Promise<boolean>;
+}
+
+export function buildWorldPanel(
+  root: HTMLElement,
+  cb: WorldPanelCallbacks,
+): { setSavedNames(names: string[]): void } {
+  const heading = document.createElement('h3');
+  heading.textContent = 'Worlds';
+  root.appendChild(heading);
+
+  const saveBtn = document.createElement('button');
+  saveBtn.textContent = 'Save world';
+  saveBtn.addEventListener('click', () => {
+    const name = prompt('Name this world');
+    if (name?.trim()) cb.onSaveRequest(name.trim());
+  });
+  root.appendChild(saveBtn);
+
+  const select = document.createElement('select');
+  root.appendChild(stacked('saved worlds', select));
+
+  const loadBtn = document.createElement('button');
+  loadBtn.textContent = 'Load';
+  loadBtn.addEventListener('click', () => {
+    if (select.value) cb.onLoadRequest(select.value);
+  });
+  root.appendChild(loadBtn);
+
+  const deleteBtn = document.createElement('button');
+  deleteBtn.textContent = 'Delete';
+  deleteBtn.addEventListener('click', () => {
+    if (select.value) cb.onDeleteRequest(select.value);
+  });
+  root.appendChild(deleteBtn);
+
+  const shareBtn = document.createElement('button');
+  shareBtn.textContent = 'Share link';
+  shareBtn.addEventListener('click', () => {
+    void cb.onShareRequest().then(ok => {
+      const original = 'Share link';
+      shareBtn.textContent = ok ? 'Copied!' : 'Copy failed';
+      setTimeout(() => {
+        shareBtn.textContent = original;
+      }, 1500);
+    });
+  });
+  root.appendChild(shareBtn);
+
+  return {
+    setSavedNames(names: string[]) {
+      const previous = select.value;
+      select.replaceChildren();
+      for (const name of names) select.appendChild(new Option(name, name));
+      // Preserve the selection when it survives the refresh.
+      if (names.includes(previous)) select.value = previous;
+      const empty = names.length === 0;
+      loadBtn.disabled = empty;
+      deleteBtn.disabled = empty;
+      select.disabled = empty;
+    },
+  };
 }

@@ -36,9 +36,11 @@ LifeEngine → ClusterTracker → SoundMapper (Tone.js)
 | `src/audio/allocation.ts` | Pure policy: `planPings` (cap 12/tick, 80 ms stagger, endpoint-inclusive overflow sampling), `allocateVoices` (largest win), `orphanedVoiceIds`. |
 | `src/audio/arpeggio.ts` | Pure: `deriveArpeggio(cells, maxNotes, rng)` — piano-roll read of a cluster (rows top-down, one random cell/row, x−minX = degree offset). `ArpInstrument` type lives here so UI never imports Tone. |
 | `src/audio/soundMapper.ts` | ALL Tone.js. PadVoice + ArpVoice pools, ping synth, anchor drone, bus. Only this file and `main.ts` may import `tone`. |
+| `src/world/codec.ts` | Pure. `WorldState` (cells + settings) ⇄ URL-safe v1 string: `serializeWorld`/`deserializeWorld` (board = RLE `r` or base64url bitmap `x`, whichever is shorter). Deserialize is defensive (untrusted share links → null on any malformed field). `SCALE_ORDER`/`INSTRUMENT_ORDER` are **pinned append-only** index maps. |
+| `src/world/moods.ts` | Pure. 6 `MOODS` (pattern-group recipes + rate/scale/arp choices), injected RNG. `generateMoodWorld` rolls a `WorldState`: random placements with `MARGIN`/`GAP` so each pattern starts its own cluster; `MoodBase` passes the user's volumes/arp texture through. |
 | `src/ui/renderer.ts` | Canvas: cluster hues (golden angle), birth flash 600 ms, death fade 900 ms, pitch rings, hollow cells for arps, preview ghost, empty hint. |
-| `src/ui/controls.ts` | DOM only, everything flows out via callbacks: `buildControls` (palette + transport/key) and `buildArpPanel`. |
-| `src/main.ts` | Wiring only: transport tick pipeline, pointer/keyboard, audio gate, `?debug` overlay. |
+| `src/ui/controls.ts` | DOM only, everything flows out via callbacks: `buildControls` (palette + transport/key, plus `setRate/setKey/setScale/setVolume` value-only setters), `buildArpPanel` (`setSettings`), `buildMoodPanel`, `buildWorldPanel`. Setters write element values only — never fire callbacks. |
+| `src/main.ts` | Wiring only: transport tick pipeline, pointer/keyboard, audio gate, `?debug` overlay, worlds (moods/save/load/share, `applyWorld`, `#w=` link). |
 
 ### Sound model (the core design)
 
@@ -48,10 +50,11 @@ LifeEngine → ClusterTracker → SoundMapper (Tone.js)
 - **Arpeggio mode** (`A` key / panel toggle): clusters **born while on** (tracked in main's `arpIds` set — ids enter only at birth-while-on, leave only at death; this registry rule is the invariant) get a mono ArpVoice instead of a pad. Piano roll re-derives EVERY generation ("the pattern is the sequencer"). Base MIDI 60, no wrap but folds above C8 (108) by octaves to prevent aliasing. Pool of 8. Slot = tickSec/noteCount, gate 0.9, jitter ±% of slot.
 - **Mix safety**: everything → lowpass 4500 → reverb 8 s → population duck gain → limiter −3 dB. Population is unbounded; output level is not.
 - **Orphan reconcile**: every `handleTick` releases any voice whose id isn't in the current live set, per family. This exists because paused edits run the tracker silently and discard `died` events — without it, pads stick forever (real bug we shipped and fixed).
+- **Applying a world/mood** (`applyWorld`): settings first — **arp mode toggled BEFORE the board is repopulated**, because the arp registry only admits clusters born while the mode is on. Then `engine.clear()` → set cells → `refresh(!playing)` (click-editing semantics: silent while paused, orphan reconcile settles voices on resume). A loaded/shared world with `arpMode: true` makes **all** its clusters arps (per-cluster arp membership isn't serialized — a documented approximation). Wire format indices (`SCALE_ORDER`/`INSTRUMENT_ORDER` in `codec.ts`) are **pinned append-only**: reordering or removing an entry silently changes what old share links decode to.
 
 ## Testing philosophy
 
-Pure modules get Vitest unit tests (72 passing; engine correctness is pinned by real patterns: blinker period, glider displacement, Gosper gun = 41 cells at gen 30). Tone.js and canvas/DOM layers are deliberately NOT unit-tested — they're covered by `docs/smoke-test.md` (16 manual listening checks). Don't add tests that mock Tone.
+Pure modules get Vitest unit tests (309 passing; engine correctness is pinned by real patterns: blinker period, glider displacement, Gosper gun = 41 cells at gen 30). Tone.js and canvas/DOM layers are deliberately NOT unit-tested — they're covered by `docs/smoke-test.md` (22 manual listening checks). Don't add tests that mock Tone.
 
 ## Development process (user preferences)
 

@@ -229,6 +229,23 @@ export class SoundMapper {
     this.arps.clear(); // voices recreate lazily with the new instrument next tick
   }
 
+  /** Current mixer/arp settings, for world snapshots and mood bases. */
+  snapshotSettings(): {
+    masterDb: number;
+    arpDb: number;
+    arpMaxNotes: number;
+    arpInstrument: ArpInstrument;
+    arpJitterPct: number;
+  } {
+    return {
+      masterDb: this.masterDb,
+      arpDb: this.arpDb,
+      arpMaxNotes: this.arpMaxNotes,
+      arpInstrument: this.arpInstrument,
+      arpJitterPct: this.arpJitterPct,
+    };
+  }
+
   handleTick(
     events: ClusterEvents,
     births: Cell[],
