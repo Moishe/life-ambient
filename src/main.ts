@@ -4,9 +4,17 @@ import { placePattern, rotateCells } from './engine/patterns';
 import { ClusterTracker, type ClusterEvents } from './tracker/cluster';
 import { SoundMapper } from './audio/soundMapper';
 import { Renderer } from './ui/renderer';
-import { buildControls, buildArpPanel, type Tool } from './ui/controls';
+import {
+  buildControls,
+  buildArpPanel,
+  buildMoodPanel,
+  buildWorldPanel,
+  type Tool,
+} from './ui/controls';
 import { Recorder } from './recording/recorder';
 import { formatElapsed, recordingFilename } from './recording/format';
+import { serializeWorld, deserializeWorld, type WorldState } from './world/codec';
+import { MOODS, generateMoodWorld } from './world/moods';
 
 const GRID = 96;
 
@@ -14,9 +22,18 @@ const canvas = document.querySelector<HTMLCanvasElement>('#board');
 const controlsRoot = document.querySelector<HTMLElement>('#controls');
 const paletteRoot = document.querySelector<HTMLElement>('#palette');
 const arpPanelRoot = document.querySelector<HTMLElement>('#arp-panel');
+const worldPanelRoot = document.querySelector<HTMLElement>('#world-panel');
 const gate = document.querySelector<HTMLElement>('#gate');
 const startBtn = document.querySelector<HTMLButtonElement>('#start-btn');
-if (!canvas || !controlsRoot || !paletteRoot || !arpPanelRoot || !gate || !startBtn) {
+if (
+  !canvas ||
+  !controlsRoot ||
+  !paletteRoot ||
+  !arpPanelRoot ||
+  !worldPanelRoot ||
+  !gate ||
+  !startBtn
+) {
   throw new Error('missing root elements');
 }
 
@@ -116,6 +133,20 @@ async function finishRecording(): Promise<void> {
   }
 }
 
+// Mood buttons sit at the TOP of the palette, so build them before the tools.
+buildMoodPanel(
+  paletteRoot,
+  MOODS.map(m => ({ id: m.id, name: m.name, tagline: m.tagline })),
+  {
+    onMood(id) {
+      const mood = MOODS.find(m => m.id === id);
+      if (mood) {
+        applyWorld(generateMoodWorld(mood, GRID, GRID, Math.random, mapper.snapshotSettings()));
+      }
+    },
+  },
+);
+
 const ui = buildControls(controlsRoot, paletteRoot, {
   onPlayToggle() {
     playing = !playing;
@@ -187,8 +218,106 @@ function toggleArpMode(): void {
   arpUi.setMode(arpMode);
 }
 
-// Arm the default paint tool visually (buildControls highlights no button at load).
-paletteRoot.querySelector('button')?.click();
+// --- worlds: moods, save/load, share ---
+
+const STORAGE_KEY = 'life-ambient.worlds.v1';
+
+function readSavedWorlds(): Record<string, string> {
+  try {
+    const parsed: unknown = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}');
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return {};
+    const out: Record<string, string> = {};
+    for (const [k, v] of Object.entries(parsed)) if (typeof v === 'string') out[k] = v;
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+function writeSavedWorlds(map: Record<string, string>): void {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(map));
+  } catch {
+    // storage full or blocked: saving silently fails, sharing still works
+  }
+}
+
+function currentWorld(): WorldState {
+  return {
+    cells: engine.liveCells(),
+    settings: { rate, key: mapper.key, scale: mapper.scale, arpMode, ...mapper.snapshotSettings() },
+  };
+}
+
+/** Replace the whole world. Settings go first — arp mode BEFORE the board
+ *  refresh, because the arp registry only admits clusters born while the mode
+ *  is on. Board last, with click-editing semantics (silent while paused; the
+ *  orphan reconcile settles voices on resume). */
+function applyWorld(state: WorldState): void {
+  const s = state.settings;
+  rate = s.rate;
+  scheduleLoop();
+  ui.setRate(s.rate);
+  mapper.setKeyScale(s.key, s.scale);
+  ui.setKey(s.key);
+  ui.setScale(s.scale);
+  mapper.setMasterVolume(s.masterDb);
+  ui.setVolume(s.masterDb);
+  mapper.setArpVolume(s.arpDb);
+  mapper.setArpMaxNotes(s.arpMaxNotes);
+  mapper.setArpInstrument(s.arpInstrument);
+  mapper.setArpJitter(s.arpJitterPct);
+  arpUi.setSettings({
+    db: s.arpDb,
+    maxNotes: s.arpMaxNotes,
+    instrument: s.arpInstrument,
+    jitterPct: s.arpJitterPct,
+  });
+  if (arpMode !== s.arpMode) toggleArpMode();
+  engine.clear();
+  for (const c of state.cells) engine.set(c.x, c.y, true);
+  refresh(!playing);
+}
+
+const worldUi = buildWorldPanel(worldPanelRoot, {
+  onSaveRequest(name) {
+    const map = readSavedWorlds();
+    map[name] = serializeWorld(currentWorld(), GRID, GRID);
+    writeSavedWorlds(map);
+    worldUi.setSavedNames(Object.keys(map).sort());
+  },
+  onLoadRequest(name) {
+    const map = readSavedWorlds();
+    const serialized = map[name];
+    if (serialized === undefined) return;
+    const state = deserializeWorld(serialized);
+    if (state) applyWorld(state);
+  },
+  onDeleteRequest(name) {
+    const map = readSavedWorlds();
+    delete map[name];
+    writeSavedWorlds(map);
+    worldUi.setSavedNames(Object.keys(map).sort());
+  },
+  async onShareRequest() {
+    const link = `${location.origin}${location.pathname}#w=${serializeWorld(currentWorld(), GRID, GRID)}`;
+    try {
+      await navigator.clipboard.writeText(link);
+      return true;
+    } catch {
+      return false;
+    }
+  },
+});
+worldUi.setSavedNames(Object.keys(readSavedWorlds()).sort());
+
+// A world carried in the URL fragment; applied once, after the audio gate.
+const hashMatch = location.hash.match(/^#w=(.+)$/);
+const pendingWorld = hashMatch ? deserializeWorld(hashMatch[1]) : null;
+
+// Arm the default paint tool visually (buildControls highlights no button at
+// load). Select a `.tool` button specifically — mood buttons now top the palette.
+paletteRoot.querySelector<HTMLButtonElement>('button.tool')?.click();
 
 // --- pointer interaction ---
 
@@ -257,6 +386,7 @@ startBtn.addEventListener('click', () => {
     scheduleLoop();
     Tone.getTransport().start();
     ui.setPlaying(true);
+    if (pendingWorld) applyWorld(pendingWorld);
   })();
 });
 

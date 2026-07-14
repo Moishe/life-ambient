@@ -52,3 +52,19 @@ Run `npm run dev`, open the URL, click "tap to start audio". Then verify:
    affects monitoring only).
 8. **Known caveat (not a failure):** Backgrounding the tab mid-recording
    freezes video frames (rAF throttling); audio keeps recording.
+
+## Moods & worlds
+
+17. **Mood apply + re-roll:** Click "Still Waters" (top of the palette). The
+    board repopulates and the speed/key/scale controls jump to match; a calm,
+    sparse soundscape plays. Click it again — a different arrangement.
+18. **Apply while playing:** With sound playing, apply any mood. The old pads
+    fade out and the new world takes over — no stuck voices.
+19. **Music Box (arp mood):** Click "Music Box". The arpeggio-mode button lights
+    up, clusters chime as bells, and their cells draw hollow.
+20. **Save/load round-trip:** Save the current world (name it), apply "Tempest",
+    then Load the save. The exact board and settings return.
+21. **Share link:** Click "Share link" (button flashes "Copied!"), paste the URL
+    in a new tab, and tap start: the same world plays.
+22. **Apply while paused:** Pause, apply a mood. It stays silent until you press
+    play, then fades in.
