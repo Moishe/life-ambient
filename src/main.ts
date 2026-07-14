@@ -134,7 +134,7 @@ async function finishRecording(): Promise<void> {
 }
 
 // Mood buttons sit at the TOP of the palette, so build them before the tools.
-buildMoodPanel(
+const moodUi = buildMoodPanel(
   paletteRoot,
   MOODS.map(m => ({ id: m.id, name: m.name, tagline: m.tagline })),
   {
@@ -142,6 +142,7 @@ buildMoodPanel(
       const mood = MOODS.find(m => m.id === id);
       if (mood) {
         applyWorld(generateMoodWorld(mood, GRID, GRID, Math.random, mapper.snapshotSettings()));
+        moodUi.setActiveMood(id);
       }
     },
   },
@@ -171,6 +172,7 @@ const ui = buildControls(controlsRoot, paletteRoot, {
   onClear() {
     engine.clear();
     refresh(false); // audible: releases all pads
+    moodUi.setActiveMood(null);
   },
   onToolChange(t) {
     tool = t;
@@ -291,7 +293,10 @@ const worldUi = buildWorldPanel(worldPanelRoot, {
     const serialized = map[name];
     if (serialized === undefined) return;
     const state = deserializeWorld(serialized);
-    if (state) applyWorld(state);
+    if (state) {
+      applyWorld(state);
+      moodUi.setActiveMood(null);
+    }
   },
   onDeleteRequest(name) {
     const map = readSavedWorlds();
@@ -386,7 +391,10 @@ startBtn.addEventListener('click', () => {
     scheduleLoop();
     Tone.getTransport().start();
     ui.setPlaying(true);
-    if (pendingWorld) applyWorld(pendingWorld);
+    if (pendingWorld) {
+      applyWorld(pendingWorld);
+      moodUi.setActiveMood(null);
+    }
   })();
 });
 

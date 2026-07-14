@@ -274,10 +274,11 @@ export function buildMoodPanel(
   root: HTMLElement,
   moods: readonly MoodButton[],
   cb: { onMood(id: string): void },
-): void {
+): { setActiveMood(id: string | null): void } {
   const heading = document.createElement('h3');
   heading.textContent = 'Moods';
   root.appendChild(heading);
+  const buttons = new Map<string, HTMLButtonElement>();
   for (const mood of moods) {
     const btn = document.createElement('button');
     btn.textContent = mood.name;
@@ -285,7 +286,15 @@ export function buildMoodPanel(
     btn.classList.add('mood');
     btn.addEventListener('click', () => cb.onMood(mood.id));
     root.appendChild(btn);
+    buttons.set(mood.id, btn);
   }
+
+  return {
+    // Element state only — never fires callbacks.
+    setActiveMood(id: string | null) {
+      for (const [moodId, btn] of buttons) btn.classList.toggle('active', moodId === id);
+    },
+  };
 }
 
 export interface WorldPanelCallbacks {

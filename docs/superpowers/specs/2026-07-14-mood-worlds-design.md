@@ -107,7 +107,9 @@ per-cluster arp membership is not preserved — acceptable, documented here.
 ## UI
 
 - **Moods**: a "Moods" section at the top of the left palette — one button per
-  mood, tagline as tooltip. Click applies immediately.
+  mood, tagline as tooltip. Click applies immediately. The applied mood stays
+  highlighted in its own accent (distinct from the tool-palette selection) until
+  another mood is applied, a world is loaded, or Clear is pressed.
 - **World panel**: below the arp panel (right sidebar): Save (prompts for a name),
   a select + Load + Delete for saved worlds, and Share (copies link, flashes
   "Copied!"). DOM-only with callbacks, per controls.ts convention.

@@ -57,13 +57,16 @@ Run `npm run dev`, open the URL, click "tap to start audio". Then verify:
 
 17. **Mood apply + re-roll:** Click "Reading" (top of the palette). The
     board repopulates and the speed/key/scale controls jump to match; a calm,
-    sparse soundscape plays. Click it again — a different arrangement.
+    sparse soundscape plays. Click it again — a different arrangement. Verify
+    the "Reading" button lights up in its amber mood highlight, and that the
+    Paint/tool-palette selection highlight is unchanged.
 18. **Apply while playing:** With sound playing, apply any mood. The old pads
     fade out and the new world takes over — no stuck voices.
 19. **Break (arp mood):** Click "Break". The arpeggio-mode button lights
     up, clusters chime as bells, and their cells draw hollow.
 20. **Save/load round-trip:** Save the current world (name it), apply "Sprinting",
-    then Load the save. The exact board and settings return.
+    then Load the save. The exact board and settings return, and loading clears
+    the mood highlight (no mood button stays lit).
 21. **Share link:** Click "Share link" (button flashes "Copied!"), paste the URL
     in a new tab, and tap start: the same world plays.
 22. **Apply while paused:** Pause, apply a mood. It stays silent until you press
