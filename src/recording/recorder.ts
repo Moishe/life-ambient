@@ -19,6 +19,10 @@ export class Recorder {
   // Set when the recorder dies via onerror with no stop() pending; the next
   // stop() call collects it so partial recordings are never dropped.
   private finished: RecordingResult | null = null;
+  // Caches the in-flight stop() promise so concurrent callers (e.g. a
+  // double-clicked stop button) all resolve together instead of the second
+  // call's synchronous InvalidStateError orphaning the first caller.
+  private stopping: Promise<RecordingResult> | null = null;
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -47,6 +51,7 @@ export class Recorder {
     this.mimeType = mimeType;
     this.chunks = [];
     this.finished = null;
+    this.stopping = null;
 
     const stream = new MediaStream([
       ...this.canvas.captureStream(30).getVideoTracks(),
@@ -78,14 +83,17 @@ export class Recorder {
       this.finished = null;
       return Promise.resolve(result);
     }
+    if (this.stopping) return this.stopping;
     if (!this.recorder) return Promise.reject(new Error('not recording'));
-    return new Promise(resolve => {
+    this.stopping = new Promise(resolve => {
       this.pendingStop = resolve;
       this.recorder!.stop();
     });
+    return this.stopping;
   }
 
   private finalize(): void {
+    if (!this.recorder) return;
     const result: RecordingResult = {
       blob: new Blob(this.chunks, { type: this.mimeType }),
       mimeType: this.mimeType,
@@ -102,5 +110,6 @@ export class Recorder {
     } else {
       this.finished = result;
     }
+    this.stopping = null;
   }
 }
