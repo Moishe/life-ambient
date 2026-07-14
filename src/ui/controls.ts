@@ -159,6 +159,9 @@ export function buildArpPanel(
   volume.value = '-10';
   volume.addEventListener('input', () => cb.onArpVolume(Number(volume.value)));
   root.appendChild(stacked('volume', volume));
+  // Fired once at build so UI and SoundMapper agree from the start. The other
+  // controls rely on their defaults matching SoundMapper's fields (16 / pluck / 1%);
+  // change either side and you must sync the other.
   cb.onArpVolume(Number(volume.value));
 
   const maxNotes = document.createElement('input');

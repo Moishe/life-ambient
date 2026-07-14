@@ -81,4 +81,15 @@ describe('degreeToFreq', () => {
       degreeToFreq(radialToDegree(0.5, 'majorPentatonic'), 'C', 'majorPentatonic'),
     );
   });
+
+  it('folds pitches above maxMidi down by whole octaves, keeping the pitch class', () => {
+    // degree 45 pentatonic from base 60: octave 9, step 0 -> midi 168, folds to 108 (C8)
+    expect(degreeToFreq(45, 'C', 'majorPentatonic', 60, 108)).toBeCloseTo(4186.01, 0);
+    // degree 12 from base 48 is midi 76 (E5); ceiling 72 folds it to 64 (E4)
+    expect(degreeToFreq(12, 'C', 'majorPentatonic', 48, 72)).toBeCloseTo(329.63, 1);
+  });
+
+  it('leaves pitches at or below maxMidi untouched', () => {
+    expect(degreeToFreq(10, 'C', 'majorPentatonic', 48, 108)).toBeCloseTo(523.25, 1);
+  });
 });

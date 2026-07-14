@@ -18,6 +18,7 @@ const PAD_BASE_MIDI = 48; // C3
 const PING_BASE_MIDI = 72; // C5, two octaves above the pad register
 const MAX_PADS = 16;
 const ARP_BASE_MIDI = 60; // one octave above pads, one below pings
+const ARP_MAX_MIDI = 108; // C8 — wide clusters fold down instead of going ultrasonic
 const MAX_ARPS = 8;
 const ARP_GATE = 0.9;
 
@@ -118,7 +119,7 @@ class ArpVoice {
     this.panner.pan.rampTo(Math.max(-1, Math.min(1, pan)), 0.5);
     const slot = tickSec / notes.length;
     for (const n of notes) {
-      const freq = degreeToFreq(rootDegree + n.degreeOffset, key, scale, ARP_BASE_MIDI);
+      const freq = degreeToFreq(rootDegree + n.degreeOffset, key, scale, ARP_BASE_MIDI, ARP_MAX_MIDI);
       const jitter = (Math.random() * 2 - 1) * (jitterPct / 100) * slot;
       const t = Math.max(when, when + n.row * slot + jitter);
       this.synth.triggerAttackRelease(freq, slot * ARP_GATE, t, 0.5);

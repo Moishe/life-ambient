@@ -25,15 +25,18 @@ export function radialToDegree(radial: number, scale: ScaleName, octaves = 2): n
 }
 
 // degreeIndex must be >= 0; indices past one scale length keep climbing (no wrap).
+// Pitches above maxMidi fold down by whole octaves (same pitch class, still in scale).
 export function degreeToFreq(
   degreeIndex: number,
   key: KeyName,
   scale: ScaleName,
   baseMidi = 48,
+  maxMidi = Infinity,
 ): number {
   const steps = SCALES[scale];
   const octave = Math.floor(degreeIndex / steps.length);
-  const midi = baseMidi + KEYS.indexOf(key) + octave * 12 + steps[degreeIndex % steps.length];
+  let midi = baseMidi + KEYS.indexOf(key) + octave * 12 + steps[degreeIndex % steps.length];
+  while (midi > maxMidi) midi -= 12;
   return midiToFreq(midi);
 }
 

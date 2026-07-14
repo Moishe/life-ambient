@@ -54,8 +54,11 @@ transpose their riff as they travel.
   their composition (behavior unchanged — existing tests must stay green).
   `degreeToFreq` requires `degreeIndex ≥ 0`.
 - Arp note frequency = `degreeToFreq(rootDegree + degreeOffset, key, scale,
-  ARP_BASE_MIDI = 60)` where `rootDegree = radialToDegree(m.radial, scale, 2)`.
-  Arps sit one octave above the pad register (pads 48, arps 60, pings 72).
+  ARP_BASE_MIDI = 60, ARP_MAX_MIDI = 108)` where `rootDegree =
+  radialToDegree(m.radial, scale, 2)`. Arps sit one octave above the pad
+  register (pads 48, arps 60, pings 72), unwrapped, so wide clusters
+  genuinely climb octaves — bounded at MIDI 108 (C8): pitches above the
+  ceiling fold down by whole octaves.
 - Key/scale changes apply on the next generation's derivation, like pads.
 
 ### Scheduling
