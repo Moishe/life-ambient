@@ -13,3 +13,9 @@ body { background: #0b0e14; color: #c8ccd4; font: 14px/1.4 system-ui, sans-serif
 #gate { position: fixed; inset: 0; background: rgba(11, 14, 20, 0.92); display: flex; align-items: center; justify-content: center; }
 #gate button { font-size: 20px; padding: 16px 32px; background: #151a24; color: #c8ccd4; border: 1px solid #7aa2f7; border-radius: 12px; cursor: pointer; }
 #gate.hidden { display: none; }
+#arp-panel { width: 180px; display: flex; flex-direction: column; gap: 10px; }
+#arp-panel h3 { margin: 10px 0 2px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: #6b7280; }
+#arp-panel button { text-align: left; padding: 6px 8px; background: #151a24; color: inherit; border: 1px solid #232936; border-radius: 6px; cursor: pointer; }
+#arp-panel button.active { border-color: #e0af68; color: #e0af68; }
+#arp-panel label.stack { display: flex; flex-direction: column; gap: 4px; color: #9aa1ad; font-size: 12px; }
+#arp-panel select { background: #151a24; color: inherit; border: 1px solid #232936; border-radius: 6px; padding: 4px 8px; }

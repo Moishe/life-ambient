@@ -1,5 +1,6 @@
 import { PATTERNS, type Pattern, type PatternCategory } from '../engine/patterns';
 import { KEYS, SCALES, type KeyName, type ScaleName } from '../audio/scale';
+import type { ArpInstrument } from '../audio/arpeggio';
 
 export type Tool = { kind: 'pattern'; pattern: Pattern } | { kind: 'paint' };
 
@@ -120,5 +121,86 @@ export function buildControls(
 function labeled(text: string, el: HTMLElement): HTMLLabelElement {
   const label = document.createElement('label');
   label.append(text, el);
+  return label;
+}
+
+export interface ArpPanelCallbacks {
+  onModeToggle(): void;
+  onArpVolume(db: number): void;
+  onArpMaxNotes(n: number): void;
+  onArpInstrument(instrument: ArpInstrument): void;
+  onArpJitter(pct: number): void;
+}
+
+const ARP_INSTRUMENT_LABELS: Record<ArpInstrument, string> = {
+  pluck: 'Pluck',
+  bell: 'Bell',
+  keys: 'Soft Keys',
+};
+
+export function buildArpPanel(
+  root: HTMLElement,
+  cb: ArpPanelCallbacks,
+): { setMode(active: boolean): void } {
+  const heading = document.createElement('h3');
+  heading.textContent = 'Arpeggios';
+  root.appendChild(heading);
+
+  const toggle = document.createElement('button');
+  toggle.textContent = 'Arpeggio mode';
+  toggle.addEventListener('click', () => cb.onModeToggle());
+  root.appendChild(toggle);
+
+  const volume = document.createElement('input');
+  volume.type = 'range';
+  volume.min = '-30';
+  volume.max = '0';
+  volume.step = '1';
+  volume.value = '-10';
+  volume.addEventListener('input', () => cb.onArpVolume(Number(volume.value)));
+  root.appendChild(stacked('volume', volume));
+  cb.onArpVolume(Number(volume.value));
+
+  const maxNotes = document.createElement('input');
+  maxNotes.type = 'range';
+  maxNotes.min = '4';
+  maxNotes.max = '16';
+  maxNotes.step = '1';
+  maxNotes.value = '16';
+  maxNotes.addEventListener('input', () => cb.onArpMaxNotes(Number(maxNotes.value)));
+  root.appendChild(stacked('max notes/gen', maxNotes));
+
+  const instrument = document.createElement('select');
+  for (const id of Object.keys(ARP_INSTRUMENT_LABELS) as ArpInstrument[]) {
+    instrument.appendChild(new Option(ARP_INSTRUMENT_LABELS[id], id));
+  }
+  instrument.addEventListener('change', () =>
+    cb.onArpInstrument(instrument.value as ArpInstrument),
+  );
+  root.appendChild(stacked('instrument', instrument));
+
+  const jitter = document.createElement('input');
+  jitter.type = 'range';
+  jitter.min = '0';
+  jitter.max = '5';
+  jitter.step = '0.5';
+  jitter.value = '1';
+  jitter.addEventListener('input', () => cb.onArpJitter(Number(jitter.value)));
+  root.appendChild(stacked('jitter %', jitter));
+
+  return {
+    setMode(active: boolean) {
+      toggle.classList.toggle('active', active);
+      toggle.textContent = active ? 'Arpeggio mode: ON' : 'Arpeggio mode';
+    },
+  };
+}
+
+function stacked(text: string, el: HTMLElement): HTMLLabelElement {
+  const label = document.createElement('label');
+  label.className = 'stack';
+  const span = document.createElement('span');
+  span.textContent = text;
+  label.append(span, el);
   return label;
 }
