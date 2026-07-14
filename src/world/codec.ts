@@ -13,7 +13,15 @@ export const SCALE_ORDER: readonly ScaleName[] = [
   'wholeTone',
   'aeolian',
 ];
-export const INSTRUMENT_ORDER: readonly ArpInstrument[] = ['pluck', 'bell', 'keys'];
+export const INSTRUMENT_ORDER = ['pluck', 'bell', 'keys'] as const satisfies readonly ArpInstrument[];
+
+// ArpInstrument has no runtime source-of-truth array (unlike SCALES, which a test
+// pins against SCALE_ORDER), so exhaustiveness is enforced at the type level: a
+// new union member that isn't appended to INSTRUMENT_ORDER fails to compile here.
+type AssertExhaustive<T extends never> = T;
+type _InstrumentsMissingFromOrder = AssertExhaustive<
+  Exclude<ArpInstrument, (typeof INSTRUMENT_ORDER)[number]>
+>;
 
 export interface WorldSettings {
   rate: number; // generations/sec, integer 1..8
