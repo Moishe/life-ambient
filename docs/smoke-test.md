@@ -23,3 +23,11 @@ Run `npm run dev`, open the URL, click "tap to start audio". Then verify:
 13. **No stuck voices after paused edits**: while a pad is sounding, pause,
     paint over that cluster's cells to erase it, then press Clear (or play);
     the pad fades out within a few seconds — nothing drones on.
+14. **Arpeggio riffs**: press `A` (panel button lights up amber), stamp a
+    Pulsar; instead of a pad it plays a cyclic riff that mutates through its
+    period-3 cycle, and its cells draw hollow.
+15. **Mode isolation**: with pads sounding, toggle arpeggio mode on and off;
+    nothing already playing changes. New stamps follow the current mode.
+16. **Arp controls**: arp volume attenuates only the riffs; max notes/gen
+    audibly thins a tall pattern; each instrument sounds distinct; jitter at
+    5% loosens timing, 0% locks it.

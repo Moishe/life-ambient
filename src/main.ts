@@ -1,19 +1,20 @@
 import * as Tone from 'tone';
 import { LifeEngine } from './engine/life';
 import { placePattern, rotateCells } from './engine/patterns';
-import { ClusterTracker } from './tracker/cluster';
+import { ClusterTracker, type ClusterEvents } from './tracker/cluster';
 import { SoundMapper } from './audio/soundMapper';
 import { Renderer } from './ui/renderer';
-import { buildControls, type Tool } from './ui/controls';
+import { buildControls, buildArpPanel, type Tool } from './ui/controls';
 
 const GRID = 96;
 
 const canvas = document.querySelector<HTMLCanvasElement>('#board');
 const controlsRoot = document.querySelector<HTMLElement>('#controls');
 const paletteRoot = document.querySelector<HTMLElement>('#palette');
+const arpPanelRoot = document.querySelector<HTMLElement>('#arp-panel');
 const gate = document.querySelector<HTMLElement>('#gate');
 const startBtn = document.querySelector<HTMLButtonElement>('#start-btn');
-if (!canvas || !controlsRoot || !paletteRoot || !gate || !startBtn) {
+if (!canvas || !controlsRoot || !paletteRoot || !arpPanelRoot || !gate || !startBtn) {
   throw new Error('missing root elements');
 }
 
@@ -22,17 +23,31 @@ const tracker = new ClusterTracker(GRID, GRID);
 const mapper = new SoundMapper();
 const renderer = new Renderer(canvas, GRID, GRID);
 
+// Ids of clusters born while arpeggio mode is on; handed to the renderer as a
+// live reference (mutations are visible without re-calling setArpIds).
+const arpIds = new Set<number>();
+renderer.setArpIds(arpIds);
+
 let playing = true;
 let rate = 4; // generations per second
 let tool: Tool = { kind: 'paint' };
 let rotation = 0;
+let arpMode = false;
 let cursor: { x: number; y: number } | null = null;
 let repeatId: number | null = null;
+
+// Registry invariant: ids enter arpIds ONLY when born while the mode is on,
+// and leave ONLY on death. Runs on every tracker update (tick and refresh).
+function updateArpRegistry(events: ClusterEvents): void {
+  if (arpMode) for (const m of events.born) arpIds.add(m.id);
+  for (const id of events.died) arpIds.delete(id);
+}
 
 function tick(): void {
   const { births, deaths } = engine.tick();
   const events = tracker.update(engine.liveCells());
-  mapper.handleTick(events, births, engine.population(), 1 / rate, GRID, GRID);
+  updateArpRegistry(events);
+  mapper.handleTick(events, births, engine.population(), 1 / rate, GRID, GRID, arpIds);
   const t = performance.now();
   renderer.noteBirths(births, t);
   renderer.noteDeaths(deaths, t);
@@ -49,8 +64,9 @@ function scheduleLoop(): void {
 // (arranging); the next audible tick creates any missing pads lazily.
 function refresh(silent: boolean): void {
   const events = tracker.update(engine.liveCells());
+  updateArpRegistry(events);
   if (!silent) {
-    mapper.handleTick(events, [], engine.population(), 1 / rate, GRID, GRID);
+    mapper.handleTick(events, [], engine.population(), 1 / rate, GRID, GRID, arpIds);
   }
   renderer.setClusters([...events.born, ...events.updated]);
 }
@@ -86,6 +102,29 @@ const ui = buildControls(controlsRoot, paletteRoot, {
     updatePreview();
   },
 });
+
+const arpUi = buildArpPanel(arpPanelRoot, {
+  onModeToggle() {
+    toggleArpMode();
+  },
+  onArpVolume(db) {
+    mapper.setArpVolume(db);
+  },
+  onArpMaxNotes(n) {
+    mapper.setArpMaxNotes(n);
+  },
+  onArpInstrument(instrument) {
+    mapper.setArpInstrument(instrument);
+  },
+  onArpJitter(pct) {
+    mapper.setArpJitter(pct);
+  },
+});
+
+function toggleArpMode(): void {
+  arpMode = !arpMode;
+  arpUi.setMode(arpMode);
+}
 
 // Arm the default paint tool visually (buildControls highlights no button at load).
 paletteRoot.querySelector('button')?.click();
@@ -136,6 +175,7 @@ window.addEventListener('keydown', ev => {
     rotation = (rotation + 1) % 4;
     updatePreview();
   }
+  if (ev.key === 'a' || ev.key === 'A') toggleArpMode();
 });
 
 // --- render loop ---

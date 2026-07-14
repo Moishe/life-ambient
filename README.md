@@ -13,6 +13,10 @@ change), and cell births become soft percussive pings. Deaths are silent.
 Open the printed URL, click "tap to start audio", pick a pattern, click
 the grid to place it. `R` rotates the armed pattern.
 
+Press `A` to toggle arpeggio mode: patterns placed while it is on become
+piano-roll arpeggios (drawn as hollow cells) instead of pads — rows play
+top-down across each generation, cell position sets the scale degree.
+
 ## Develop
 
     npm test          # unit tests (engine, tracker, scale, allocation)
