@@ -47,5 +47,8 @@ Run `npm run dev`, open the URL, click "tap to start audio". Then verify:
    resumes — no splice.
 6. **Reusable:** Record → stop → record again → stop. The second file also has
    audio (the shared audio-capture node survives the first recording).
-7. **Known caveat (not a failure):** Backgrounding the tab mid-recording
+7. **Master volume independence:** Turn master volume way down while
+   recording; the downloaded file still plays at full level (the slider
+   affects monitoring only).
+8. **Known caveat (not a failure):** Backgrounding the tab mid-recording
    freezes video frames (rAF throttling); audio keeps recording.

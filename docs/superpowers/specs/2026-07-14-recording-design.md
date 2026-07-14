@@ -9,9 +9,11 @@
 A record/stop button in the transport controls captures the live board
 (canvas) and the live mastered audio mix into a single downloadable video
 file. Recording is a real-time, WYSIWYG capture: whatever appears on the
-canvas and comes out of the speakers is what lands in the file, including
+canvas and the mastered audio mix is what lands in the file, including
 pauses (held frame, fading audio) and mid-recording edits. Pressing stop
-generates the file and triggers a browser download immediately.
+generates the file and triggers a browser download immediately. The master
+volume slider affects monitoring only — recordings are always at full
+mastered level.
 
 Format preference: MP4/H.264 where the browser's MediaRecorder supports it
 (Chrome 126+, Safari), otherwise WebM. No transcoding, no dependencies.

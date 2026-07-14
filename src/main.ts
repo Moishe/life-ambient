@@ -152,6 +152,10 @@ const ui = buildControls(controlsRoot, paletteRoot, {
       void finishRecording();
       return;
     }
+    if (recordTimer !== null) {
+      clearInterval(recordTimer); // stale interval from an onerror double-fault
+      recordTimer = null;
+    }
     recorder.start();
     updateRecordUi();
     recordTimer = window.setInterval(updateRecordUi, 1000);
