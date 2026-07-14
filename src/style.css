@@ -8,6 +8,9 @@ body { background: #0b0e14; color: #c8ccd4; font: 14px/1.4 system-ui, sans-serif
 #palette button.selected { border-color: #7aa2f7; color: #7aa2f7; }
 #palette button.mood { border-color: #3a3350; }
 #palette button.mood.active { border-color: #e0af68; color: #e0af68; }
+#palette button.mood.pending { border-color: #e0af68; color: #e0af68; animation: mood-breathe 1.2s ease-in-out infinite alternate; }
+@keyframes mood-breathe { from { opacity: 0.45; border-color: #6b5a34; } to { opacity: 1; border-color: #e0af68; } }
+@media (prefers-reduced-motion: reduce) { #palette button.mood.pending { animation: none; } }
 #controls { display: flex; align-items: center; gap: 12px; padding: 8px 0 12px; flex-wrap: wrap; }
 #controls label { display: flex; align-items: center; gap: 6px; color: #9aa1ad; }
 #controls select, #controls button { background: #151a24; color: inherit; border: 1px solid #232936; border-radius: 6px; padding: 4px 8px; cursor: pointer; }

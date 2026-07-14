@@ -274,7 +274,7 @@ export function buildMoodPanel(
   root: HTMLElement,
   moods: readonly MoodButton[],
   cb: { onMood(id: string): void },
-): { setActiveMood(id: string | null): void } {
+): { setActiveMood(id: string | null): void; setPendingMood(id: string | null): void } {
   const heading = document.createElement('h3');
   heading.textContent = 'Moods';
   root.appendChild(heading);
@@ -293,6 +293,11 @@ export function buildMoodPanel(
     // Element state only — never fires callbacks.
     setActiveMood(id: string | null) {
       for (const [moodId, btn] of buttons) btn.classList.toggle('active', moodId === id);
+    },
+    // Marks a mood as mid-transition (the board is clearing/fading before the
+    // new world lands). Toggles the breathing 'pending' pulse; fires no callback.
+    setPendingMood(id: string | null) {
+      for (const [moodId, btn] of buttons) btn.classList.toggle('pending', moodId === id);
     },
   };
 }

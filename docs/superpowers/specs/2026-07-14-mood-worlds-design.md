@@ -107,9 +107,14 @@ per-cluster arp membership is not preserved — acceptable, documented here.
 ## UI
 
 - **Moods**: a "Moods" section at the top of the left palette — one button per
-  mood, tagline as tooltip. Click applies immediately. The applied mood stays
-  highlighted in its own accent (distinct from the tool-palette selection) until
-  another mood is applied, a world is loaded, or Clear is pressed.
+  mood, tagline as tooltip. The applied mood stays highlighted in its own accent
+  (distinct from the tool-palette selection) until another mood is applied, a
+  world is loaded, or Clear is pressed.
+- **Mood transition**: a mood switch clears the board immediately (every voice
+  fades over its 4 s release), then after ~3 s of fading quiet the new world
+  lands and starts sounding; the button "breathes" during the gap. Editing the
+  board, Clear, or loading a world during the gap cancels the incoming mood.
+  World loads and `#w=` links stay instant (no gap).
 - **World panel**: below the arp panel (right sidebar): Save (prompts for a name),
   a select + Load + Delete for saved worlds, and Share (copies link, flashes
   "Copied!"). DOM-only with callbacks, per controls.ts convention.
@@ -124,7 +129,7 @@ per-cluster arp membership is not preserved — acceptable, documented here.
 - Live `hashchange` handling (links load on boot only).
 - Preserving exact arp membership per cluster.
 - Import/export files; cloud anything.
-- Mood transitions/morphing (apply is instant).
+- Mood morphing/crossfade (the transition is a silence gap, not a blend).
 
 ## Testing
 

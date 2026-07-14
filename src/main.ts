@@ -18,6 +18,10 @@ import { MOODS, generateMoodWorld } from './world/moods';
 
 const GRID = 96;
 
+// Silence gap when switching moods: long enough for the 4 s pad release to
+// mostly fade under the reverb tail, short enough to feel like a breath, not a stall.
+const TRANSITION_MS = 3000;
+
 const canvas = document.querySelector<HTMLCanvasElement>('#board');
 const controlsRoot = document.querySelector<HTMLElement>('#controls');
 const paletteRoot = document.querySelector<HTMLElement>('#palette');
@@ -58,6 +62,24 @@ let repeatId: number | null = null;
 const recorder = new Recorder(canvas, () => mapper.captureStream());
 let recordTimer: number | null = null;
 let finishing = false;
+
+// Handle for a pending mood transition (the silence gap before the new world
+// lands). number via window.setTimeout, mirroring recordTimer.
+let moodTimer: number | null = null;
+
+// Cancels any in-flight mood transition: clears the timeout, drops the pending
+// pulse. Returns whether a transition was actually pending (callers use this to
+// decide whether to also clear the active-mood highlight). Called wherever an
+// action supersedes the incoming world.
+function cancelMoodTransition(): boolean {
+  const wasPending = moodTimer !== null;
+  if (moodTimer !== null) {
+    window.clearTimeout(moodTimer);
+    moodTimer = null;
+  }
+  moodUi.setPendingMood(null);
+  return wasPending;
+}
 
 // Registry invariant: ids enter arpIds ONLY when born while the mode is on,
 // and leave ONLY on death. Runs on every tracker update (tick and refresh).
@@ -140,10 +162,22 @@ const moodUi = buildMoodPanel(
   {
     onMood(id) {
       const mood = MOODS.find(m => m.id === id);
-      if (mood) {
-        applyWorld(generateMoodWorld(mood, GRID, GRID, Math.random, mapper.snapshotSettings()));
+      if (!mood) return;
+      // Roll the dice NOW so the arrangement is fixed at click time; it lands
+      // after the gap. Clearing the board first fades every voice out (same as
+      // onClear), leaving ~3 s of quiet before the new world sounds.
+      const newState = generateMoodWorld(mood, GRID, GRID, Math.random, mapper.snapshotSettings());
+      cancelMoodTransition();
+      engine.clear();
+      refresh(false); // audible: releases every pad/arp, ramps out the drone
+      moodUi.setActiveMood(id); // instant feedback
+      moodUi.setPendingMood(id); // breathing pulse during the gap
+      moodTimer = window.setTimeout(() => {
+        moodTimer = null;
+        applyWorld(newState);
         moodUi.setActiveMood(id);
-      }
+        moodUi.setPendingMood(null);
+      }, TRANSITION_MS);
     },
   },
 );
@@ -170,6 +204,7 @@ const ui = buildControls(controlsRoot, paletteRoot, {
     mapper.setMasterVolume(db);
   },
   onClear() {
+    cancelMoodTransition();
     engine.clear();
     refresh(false); // audible: releases all pads
     moodUi.setActiveMood(null);
@@ -294,6 +329,7 @@ const worldUi = buildWorldPanel(worldPanelRoot, {
     if (serialized === undefined) return;
     const state = deserializeWorld(serialized);
     if (state) {
+      cancelMoodTransition();
       applyWorld(state);
       moodUi.setActiveMood(null);
     }
@@ -356,6 +392,8 @@ canvas.addEventListener('mouseleave', () => {
 });
 
 canvas.addEventListener('click', ev => {
+  // A board edit wins over a pending mood: the incoming world must not land.
+  if (cancelMoodTransition()) moodUi.setActiveMood(null);
   const { x, y } = cellAt(ev);
   if (tool.kind === 'pattern') {
     placePattern(engine, tool.pattern, x, y, rotation);
@@ -392,6 +430,7 @@ startBtn.addEventListener('click', () => {
     Tone.getTransport().start();
     ui.setPlaying(true);
     if (pendingWorld) {
+      cancelMoodTransition();
       applyWorld(pendingWorld);
       moodUi.setActiveMood(null);
     }

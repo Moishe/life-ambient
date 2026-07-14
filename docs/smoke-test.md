@@ -71,3 +71,8 @@ Run `npm run dev`, open the URL, click "tap to start audio". Then verify:
     in a new tab, and tap start: the same world plays.
 22. **Apply while paused:** Pause, apply a mood. It stays silent until you press
     play, then fades in.
+23. **Mood transition gap:** With sound playing, switch from one mood to another.
+    The board clears at once and there are a few seconds of fade-to-quiet (the
+    button "breathes") before the new world sounds — settings don't jump until it
+    lands. Then repeat, but paint on the board during the gap: the incoming mood
+    is cancelled (never sounds), the mood highlight clears, and your edit stays.
