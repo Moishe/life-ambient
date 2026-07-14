@@ -2,12 +2,24 @@ import * as Tone from 'tone';
 import type { Cell } from '../engine/life';
 import type { ClusterEvents, ClusterMetrics } from '../tracker/cluster';
 import { cellRadial } from '../geometry';
-import { KEYS, midiToFreq, quantize, type KeyName, type ScaleName } from './scale';
+import {
+  KEYS,
+  midiToFreq,
+  quantize,
+  radialToDegree,
+  degreeToFreq,
+  type KeyName,
+  type ScaleName,
+} from './scale';
 import { allocateVoices, orphanedVoiceIds, planPings } from './allocation';
+import { deriveArpeggio, type ArpInstrument, type ArpNote } from './arpeggio';
 
 const PAD_BASE_MIDI = 48; // C3
 const PING_BASE_MIDI = 72; // C5, two octaves above the pad register
 const MAX_PADS = 16;
+const ARP_BASE_MIDI = 60; // one octave above pads, one below pings
+const MAX_ARPS = 8;
+const ARP_GATE = 0.9;
 
 class PadVoice {
   private gain = new Tone.Gain(0);
@@ -63,6 +75,62 @@ class PadVoice {
   }
 }
 
+class ArpVoice {
+  private synth: Tone.PluckSynth | Tone.FMSynth | Tone.AMSynth;
+  private panner = new Tone.Panner(0);
+
+  constructor(out: Tone.ToneAudioNode, instrument: ArpInstrument) {
+    switch (instrument) {
+      case 'bell':
+        this.synth = new Tone.FMSynth({
+          harmonicity: 3.01,
+          modulationIndex: 14,
+          envelope: { attack: 0.002, decay: 0.6, sustain: 0, release: 0.4 },
+          modulationEnvelope: { attack: 0.002, decay: 0.3, sustain: 0, release: 0.3 },
+          volume: -10,
+        });
+        break;
+      case 'keys':
+        this.synth = new Tone.AMSynth({
+          harmonicity: 2,
+          envelope: { attack: 0.01, decay: 0.4, sustain: 0.2, release: 0.6 },
+          volume: -8,
+        });
+        break;
+      default:
+        this.synth = new Tone.PluckSynth({ dampening: 3500, resonance: 0.9, volume: -6 });
+    }
+    this.synth.connect(this.panner);
+    this.panner.connect(out);
+  }
+
+  schedule(
+    notes: ArpNote[],
+    rootDegree: number,
+    key: KeyName,
+    scale: ScaleName,
+    tickSec: number,
+    when: number,
+    jitterPct: number,
+    pan: number,
+  ): void {
+    if (notes.length === 0) return;
+    this.panner.pan.rampTo(Math.max(-1, Math.min(1, pan)), 0.5);
+    const slot = tickSec / notes.length;
+    for (const n of notes) {
+      const freq = degreeToFreq(rootDegree + n.degreeOffset, key, scale, ARP_BASE_MIDI);
+      const jitter = (Math.random() * 2 - 1) * (jitterPct / 100) * slot;
+      const t = Math.max(when, when + n.row * slot + jitter);
+      this.synth.triggerAttackRelease(freq, slot * ARP_GATE, t, 0.5);
+    }
+  }
+
+  dispose(): void {
+    this.synth.dispose();
+    this.panner.dispose();
+  }
+}
+
 export class SoundMapper {
   key: KeyName = 'C';
   scale: ScaleName = 'majorPentatonic';
@@ -76,6 +144,12 @@ export class SoundMapper {
   private anchorFifth!: Tone.Oscillator;
   private anchorGain!: Tone.Gain;
   private pads = new Map<number, PadVoice>();
+  private arps = new Map<number, ArpVoice>();
+  private arpGain!: Tone.Gain;
+  private arpDb = -10;
+  private arpInstrument: ArpInstrument = 'pluck';
+  private arpMaxNotes = 16;
+  private arpJitterPct = 1;
   private ready = false;
   private masterDb = -6;
 
@@ -99,6 +173,7 @@ export class SoundMapper {
     this.anchorFifth = new Tone.Oscillator(midiToFreq(43), 'triangle')
       .connect(this.anchorGain)
       .start();
+    this.arpGain = new Tone.Gain(Math.pow(10, this.arpDb / 20)).connect(this.busIn);
     Tone.getDestination().volume.value = this.masterDb;
     this.ready = true;
   }
@@ -118,6 +193,25 @@ export class SoundMapper {
     if (this.ready) Tone.getDestination().volume.rampTo(db, 0.1);
   }
 
+  setArpVolume(db: number): void {
+    this.arpDb = db;
+    if (this.ready) this.arpGain.gain.rampTo(Math.pow(10, db / 20), 0.1);
+  }
+
+  setArpMaxNotes(n: number): void {
+    this.arpMaxNotes = n;
+  }
+
+  setArpJitter(pct: number): void {
+    this.arpJitterPct = pct;
+  }
+
+  setArpInstrument(instrument: ArpInstrument): void {
+    this.arpInstrument = instrument;
+    for (const voice of this.arps.values()) voice.dispose();
+    this.arps.clear(); // voices recreate lazily with the new instrument next tick
+  }
+
   handleTick(
     events: ClusterEvents,
     births: Cell[],
@@ -125,6 +219,7 @@ export class SoundMapper {
     tickSec: number,
     gridW: number,
     gridH: number,
+    arpIds: ReadonlySet<number> = new Set(),
   ): void {
     if (!this.ready) return;
     const now = Tone.now();
@@ -139,13 +234,20 @@ export class SoundMapper {
     for (const id of events.died) {
       this.pads.get(id)?.release();
       this.pads.delete(id);
+      const arp = this.arps.get(id);
+      if (arp) {
+        this.arps.delete(id);
+        setTimeout(() => arp.dispose(), 4000); // let in-flight notes ring out
+      }
     }
     const active = [...events.born, ...events.updated];
+    const padActive = active.filter(m => !arpIds.has(m.id));
+    const arpActive = active.filter(m => arpIds.has(m.id));
     const audible = allocateVoices(
-      active.map(m => ({ id: m.id, cellCount: m.cellCount })),
+      padActive.map(m => ({ id: m.id, cellCount: m.cellCount })),
       MAX_PADS,
     );
-    for (const m of active) {
+    for (const m of padActive) {
       if (!audible.has(m.id)) {
         this.pads.get(m.id)?.mute();
         continue;
@@ -161,12 +263,41 @@ export class SoundMapper {
       voice.apply(m, freq, isNew ? 2 : Math.max(0.1, tickSec * 0.9));
     }
 
-    // Reconcile any pad whose cluster vanished without a `died` event (e.g.
-    // erased or merged away during paused edits): release true orphans only.
-    const liveIds = new Set(active.map(m => m.id));
-    for (const id of orphanedVoiceIds(this.pads.keys(), liveIds)) {
+    const arpAudible = allocateVoices(
+      arpActive.map(m => ({ id: m.id, cellCount: m.cellCount })),
+      MAX_ARPS,
+    );
+    for (const m of arpActive) {
+      if (!arpAudible.has(m.id)) continue; // over the cap: silent this tick
+      let voice = this.arps.get(m.id);
+      if (!voice) {
+        voice = new ArpVoice(this.arpGain, this.arpInstrument);
+        this.arps.set(m.id, voice);
+      }
+      voice.schedule(
+        deriveArpeggio(m.cells, this.arpMaxNotes),
+        radialToDegree(m.radial, this.scale, 2),
+        this.key,
+        this.scale,
+        tickSec,
+        now,
+        this.arpJitterPct,
+        m.pan,
+      );
+    }
+
+    // Reconcile any pad or arp whose cluster vanished without a `died` event
+    // (e.g. erased or merged away during paused edits): release true orphans.
+    const livePadIds = new Set(padActive.map(m => m.id));
+    for (const id of orphanedVoiceIds(this.pads.keys(), livePadIds)) {
       this.pads.get(id)?.release();
       this.pads.delete(id);
+    }
+    const liveArpIds = new Set(arpActive.map(m => m.id));
+    for (const id of orphanedVoiceIds(this.arps.keys(), liveArpIds)) {
+      const voice = this.arps.get(id)!;
+      this.arps.delete(id);
+      setTimeout(() => voice.dispose(), 4000);
     }
 
     // 3. Harmonic anchor: sounds whenever anything is alive.
