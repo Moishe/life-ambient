@@ -174,22 +174,22 @@ describe('generateMoodWorld settings', () => {
     }
   }
 
-  it('Music Box claims the bell instrument', () => {
-    const musicbox = MOODS.find(m => m.id === 'musicbox')!;
-    expect(musicbox.arpInstrument).toBe('bell');
+  it('Break claims the bell instrument', () => {
+    const brk = MOODS.find(m => m.id === 'break')!;
+    expect(brk.arpInstrument).toBe('bell');
     for (const seed of SEEDS) {
-      const world = generateMoodWorld(musicbox, GRID, GRID, mulberry32(seed), testBase);
+      const world = generateMoodWorld(brk, GRID, GRID, mulberry32(seed), testBase);
       expect(world.settings.arpInstrument).toBe('bell');
       expect(world.settings.arpMode).toBe(true);
     }
   });
 });
 
-describe('Fountain always places the Gosper gun', () => {
-  const fountain = MOODS.find(m => m.id === 'fountain')!;
+describe('Grinding always places the Gosper gun', () => {
+  const grinding = MOODS.find(m => m.id === 'grinding')!;
   for (const seed of SEEDS) {
     it(`seed ${seed}: at least one gosperGun placement`, () => {
-      const placements = planMood(fountain, GRID, GRID, mulberry32(seed));
+      const placements = planMood(grinding, GRID, GRID, mulberry32(seed));
       expect(placements.some(p => p.pattern.id === 'gosperGun')).toBe(true);
     });
   }

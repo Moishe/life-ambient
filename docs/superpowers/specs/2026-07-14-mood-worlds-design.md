@@ -4,7 +4,7 @@
 
 Three related features sharing one data model:
 
-1. **Mood templates** — named, curated recipes ("Still Waters", "Tempest", …) that
+1. **Mood templates** — named, curated recipes ("Reading", "Sprinting", …) that
    recreate a whole world in one click: pattern placements on the grid AND matching
    sound settings (speed, key, scale, arp mode/instrument). Randomized within the
    mood: every apply rolls a fresh arrangement. Everything remains fully editable
@@ -48,12 +48,12 @@ below for the approximation.
 
 | id | name | recipe | rate | scales | arp |
 |---|---|---|---|---|---|
-| stillness | Still Waters | 6–9 drones + 1–2 blinkers | 1–2 | major pent., lydian | off |
-| heartbeat | Heartbeat | 4–7 small pulses + 1 pulsar + 0–1 pentadecathlon | 3–4 | dorian, aeolian | off |
-| voyagers | Voyagers | 3–5 gliders + 1–2 LWSS + 2–3 drones | 4–5 | lydian, whole tone | off |
-| musicbox | Music Box | 3–5 drones + 2–4 small pulses + 0–1 pulsar | 2–3 | major pent. | **on**, bell |
-| fountain | Fountain | 1 Gosper gun + 2–4 drones | 4 | dorian | off |
-| tempest | Tempest | 1–2 R-pentominoes + 1 acorn + 2–3 gliders | 6–8 | minor pent., whole tone | off |
+| reading | Reading | 6–9 drones + 1–2 blinkers | 1–2 | major pent., lydian | off |
+| writing | Writing | 4–7 small pulses + 1 pulsar + 0–1 pentadecathlon | 3–4 | dorian, aeolian | off |
+| thinking | Thinking | 3–5 gliders + 1–2 LWSS + 2–3 drones | 4–5 | lydian, whole tone | off |
+| break | Break | 3–5 drones + 2–4 small pulses + 0–1 pulsar | 2–3 | major pent. | **on**, bell |
+| grinding | Grinding | 1 Gosper gun + 2–4 drones | 4 | dorian | off |
+| sprinting | Sprinting | 1–2 R-pentominoes + 1 acorn + 2–3 gliders | 6–8 | minor pent., whole tone | off |
 
 Moods override *musical identity* (rate, key, scale, arp mode + instrument) but
 **preserve the user's current volumes** (master, arp) and arp max-notes/jitter —

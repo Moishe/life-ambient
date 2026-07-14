@@ -255,6 +255,8 @@ Match the style of existing tests in `tests/`. Cover at minimum:
 
 ## Task 2 — mood recipes + generator (`src/world/moods.ts` + `tests/world-moods.test.ts`)
 
+*Note: mood ids/names were renamed after review to work-mode names (reading/writing/thinking/break/grinding/sprinting) — see the spec's mood table. Recipes unchanged.*
+
 Pure module. Uses `PATTERNS`/`rotateCells` from `src/engine/patterns.ts`. RNG is
 injected (`Rng = () => number`, Math.random-compatible) so tests seed it.
 

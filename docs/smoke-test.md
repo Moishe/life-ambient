@@ -55,14 +55,14 @@ Run `npm run dev`, open the URL, click "tap to start audio". Then verify:
 
 ## Moods & worlds
 
-17. **Mood apply + re-roll:** Click "Still Waters" (top of the palette). The
+17. **Mood apply + re-roll:** Click "Reading" (top of the palette). The
     board repopulates and the speed/key/scale controls jump to match; a calm,
     sparse soundscape plays. Click it again — a different arrangement.
 18. **Apply while playing:** With sound playing, apply any mood. The old pads
     fade out and the new world takes over — no stuck voices.
-19. **Music Box (arp mood):** Click "Music Box". The arpeggio-mode button lights
+19. **Break (arp mood):** Click "Break". The arpeggio-mode button lights
     up, clusters chime as bells, and their cells draw hollow.
-20. **Save/load round-trip:** Save the current world (name it), apply "Tempest",
+20. **Save/load round-trip:** Save the current world (name it), apply "Sprinting",
     then Load the save. The exact board and settings return.
 21. **Share link:** Click "Share link" (button flashes "Copied!"), paste the URL
     in a new tab, and tap start: the same world plays.
