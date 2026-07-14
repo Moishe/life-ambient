@@ -31,3 +31,21 @@ Run `npm run dev`, open the URL, click "tap to start audio". Then verify:
 16. **Arp controls**: arp volume attenuates only the riffs; max notes/gen
     audibly thins a tall pattern; each instrument sounds distinct; jitter at
     5% loosens timing, 0% locks it.
+
+## Recording
+
+1. **Support:** In Chrome, Firefox, and Safari the `● Rec` button is enabled (no
+   "not supported" tooltip).
+2. **Basic capture:** With patterns playing, press `● Rec`, wait ~15 s, press
+   `■`. A file downloads; it plays back with sound, and the video matches what
+   was on screen.
+3. **Format:** In Chrome ≥126 or Safari the file is `.mp4`; in Firefox `.webm`.
+4. **Timer:** While recording, the button shows `■ 0:01`, `■ 0:02`, … counting
+   up, tinted red.
+5. **Pause mid-recording:** Pause the sim while recording, wait a few seconds,
+   resume, stop. The video holds the frame while the audio tails fade, then
+   resumes — no splice.
+6. **Reusable:** Record → stop → record again → stop. The second file also has
+   audio (the shared audio-capture node survives the first recording).
+7. **Known caveat (not a failure):** Backgrounding the tab mid-recording
+   freezes video frames (rAF throttling); audio keeps recording.

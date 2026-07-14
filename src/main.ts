@@ -5,6 +5,8 @@ import { ClusterTracker, type ClusterEvents } from './tracker/cluster';
 import { SoundMapper } from './audio/soundMapper';
 import { Renderer } from './ui/renderer';
 import { buildControls, buildArpPanel, type Tool } from './ui/controls';
+import { Recorder } from './recording/recorder';
+import { formatElapsed, recordingFilename } from './recording/format';
 
 const GRID = 96;
 
@@ -35,6 +37,9 @@ let rotation = 0;
 let arpMode = false;
 let cursor: { x: number; y: number } | null = null;
 let repeatId: number | null = null;
+
+const recorder = new Recorder(canvas, () => mapper.captureStream());
+let recordTimer: number | null = null;
 
 // Registry invariant: ids enter arpIds ONLY when born while the mode is on,
 // and leave ONLY on death. Runs on every tracker update (tick and refresh).
@@ -71,6 +76,39 @@ function refresh(silent: boolean): void {
   renderer.setClusters([...events.born, ...events.updated]);
 }
 
+function setIdleRecordUi(): void {
+  ui.setRecordState({ recording: false, label: '● Rec', enabled: Recorder.supported() });
+}
+
+function updateRecordUi(): void {
+  if (!recorder.isRecording) {
+    // Recorder died via onerror: deliver the partial file.
+    void finishRecording();
+    return;
+  }
+  ui.setRecordState({
+    recording: true,
+    label: `■ ${formatElapsed(recorder.elapsedSec)}`,
+    enabled: true,
+  });
+}
+
+async function finishRecording(): Promise<void> {
+  if (recordTimer !== null) {
+    clearInterval(recordTimer);
+    recordTimer = null;
+  }
+  const { blob, mimeType } = await recorder.stop();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = recordingFilename(mimeType, new Date());
+  a.click();
+  // Deferred: revoking synchronously can abort the download in some browsers.
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  setIdleRecordUi();
+}
+
 const ui = buildControls(controlsRoot, paletteRoot, {
   onPlayToggle() {
     playing = !playing;
@@ -101,8 +139,19 @@ const ui = buildControls(controlsRoot, paletteRoot, {
     rotation = 0;
     updatePreview();
   },
-  onRecordToggle() {}, // wired in recording task
+  onRecordToggle() {
+    if (!Recorder.supported()) return;
+    if (recorder.isRecording) {
+      void finishRecording();
+      return;
+    }
+    recorder.start();
+    updateRecordUi();
+    recordTimer = window.setInterval(updateRecordUi, 1000);
+  },
 });
+
+setIdleRecordUi();
 
 const arpUi = buildArpPanel(arpPanelRoot, {
   onModeToggle() {
