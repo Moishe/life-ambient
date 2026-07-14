@@ -40,6 +40,7 @@ let repeatId: number | null = null;
 
 const recorder = new Recorder(canvas, () => mapper.captureStream());
 let recordTimer: number | null = null;
+let finishing = false;
 
 // Registry invariant: ids enter arpIds ONLY when born while the mode is on,
 // and leave ONLY on death. Runs on every tracker update (tick and refresh).
@@ -94,19 +95,25 @@ function updateRecordUi(): void {
 }
 
 async function finishRecording(): Promise<void> {
-  if (recordTimer !== null) {
-    clearInterval(recordTimer);
-    recordTimer = null;
+  if (finishing) return;
+  finishing = true;
+  try {
+    if (recordTimer !== null) {
+      clearInterval(recordTimer);
+      recordTimer = null;
+    }
+    const { blob, mimeType } = await recorder.stop();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = recordingFilename(mimeType, new Date());
+    a.click();
+    // Deferred: revoking synchronously can abort the download in some browsers.
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    setIdleRecordUi();
+  } finally {
+    finishing = false;
   }
-  const { blob, mimeType } = await recorder.stop();
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = recordingFilename(mimeType, new Date());
-  a.click();
-  // Deferred: revoking synchronously can abort the download in some browsers.
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-  setIdleRecordUi();
 }
 
 const ui = buildControls(controlsRoot, paletteRoot, {
