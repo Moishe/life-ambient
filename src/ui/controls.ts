@@ -12,6 +12,7 @@ export interface ControlCallbacks {
   onVolumeChange(db: number): void;
   onClear(): void;
   onToolChange(tool: Tool): void;
+  onRecordToggle(): void;
 }
 
 const CATEGORY_LABELS: Record<PatternCategory, string> = {
@@ -35,7 +36,10 @@ export function buildControls(
   controlsRoot: HTMLElement,
   paletteRoot: HTMLElement,
   cb: ControlCallbacks,
-): { setPlaying(playing: boolean): void } {
+): {
+  setPlaying(playing: boolean): void;
+  setRecordState(state: { recording: boolean; label: string; enabled: boolean }): void;
+} {
   // --- palette ---
   const buttons: HTMLButtonElement[] = [];
   const select = (btn: HTMLButtonElement, tool: Tool) => {
@@ -106,6 +110,11 @@ export function buildControls(
   clearBtn.addEventListener('click', () => cb.onClear());
   controlsRoot.appendChild(clearBtn);
 
+  const recordBtn = document.createElement('button');
+  recordBtn.textContent = '● Rec';
+  recordBtn.addEventListener('click', () => cb.onRecordToggle());
+  controlsRoot.appendChild(recordBtn);
+
   const hint = document.createElement('span');
   hint.textContent = 'R rotates the armed pattern';
   hint.style.color = '#6b7280';
@@ -114,6 +123,12 @@ export function buildControls(
   return {
     setPlaying(playing: boolean) {
       playBtn.textContent = playing ? 'Pause' : 'Play';
+    },
+    setRecordState(state: { recording: boolean; label: string; enabled: boolean }) {
+      recordBtn.textContent = state.label;
+      recordBtn.disabled = !state.enabled;
+      recordBtn.title = state.enabled ? '' : 'Recording is not supported in this browser';
+      recordBtn.classList.toggle('recording', state.recording);
     },
   };
 }

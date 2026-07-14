@@ -101,6 +101,7 @@ const ui = buildControls(controlsRoot, paletteRoot, {
     rotation = 0;
     updatePreview();
   },
+  onRecordToggle() {}, // wired in recording task
 });
 
 const arpUi = buildArpPanel(arpPanelRoot, {
