@@ -17,6 +17,26 @@ export function midiToFreq(midi: number): number {
   return 440 * Math.pow(2, (midi - 69) / 12);
 }
 
+export function radialToDegree(radial: number, scale: ScaleName, octaves = 2): number {
+  const steps = SCALES[scale];
+  const degreeCount = steps.length * octaves + 1;
+  const clamped = Math.max(0, Math.min(1, radial));
+  return Math.round(clamped * (degreeCount - 1));
+}
+
+// degreeIndex must be >= 0; indices past one scale length keep climbing (no wrap).
+export function degreeToFreq(
+  degreeIndex: number,
+  key: KeyName,
+  scale: ScaleName,
+  baseMidi = 48,
+): number {
+  const steps = SCALES[scale];
+  const octave = Math.floor(degreeIndex / steps.length);
+  const midi = baseMidi + KEYS.indexOf(key) + octave * 12 + steps[degreeIndex % steps.length];
+  return midiToFreq(midi);
+}
+
 export function quantize(
   radial: number,
   key: KeyName,
@@ -24,11 +44,5 @@ export function quantize(
   baseMidi = 48,
   octaves = 2,
 ): number {
-  const steps = SCALES[scale];
-  const degreeCount = steps.length * octaves + 1;
-  const clamped = Math.max(0, Math.min(1, radial));
-  const index = Math.round(clamped * (degreeCount - 1));
-  const octave = Math.floor(index / steps.length);
-  const midi = baseMidi + KEYS.indexOf(key) + octave * 12 + steps[index % steps.length];
-  return midiToFreq(midi);
+  return degreeToFreq(radialToDegree(radial, scale, octaves), key, scale, baseMidi);
 }

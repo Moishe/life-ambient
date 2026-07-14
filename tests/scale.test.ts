@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { SCALES, KEYS, midiToFreq, quantize } from '../src/audio/scale';
+import { SCALES, KEYS, midiToFreq, quantize, radialToDegree, degreeToFreq } from '../src/audio/scale';
 
 describe('scale quantization', () => {
   it('has 6 scales and 12 keys', () => {
@@ -41,5 +41,44 @@ describe('scale quantization', () => {
   it('clamps radial outside 0..1', () => {
     expect(quantize(-0.5, 'C', 'majorPentatonic')).toBeCloseTo(quantize(0, 'C', 'majorPentatonic'));
     expect(quantize(1.5, 'C', 'majorPentatonic')).toBeCloseTo(quantize(1, 'C', 'majorPentatonic'));
+  });
+});
+
+describe('radialToDegree', () => {
+  it('maps endpoints to first and last degree', () => {
+    expect(radialToDegree(0, 'majorPentatonic')).toBe(0);
+    expect(radialToDegree(1, 'majorPentatonic')).toBe(10); // 2 octaves x 5 steps
+    expect(radialToDegree(1, 'dorian')).toBe(14); // 2 octaves x 7 steps
+  });
+
+  it('clamps out-of-range radial', () => {
+    expect(radialToDegree(-1, 'majorPentatonic')).toBe(0);
+    expect(radialToDegree(2, 'majorPentatonic')).toBe(10);
+  });
+});
+
+describe('degreeToFreq', () => {
+  it('degree 0 is the base root', () => {
+    expect(degreeToFreq(0, 'C', 'majorPentatonic')).toBeCloseTo(130.81, 1); // C3
+  });
+
+  it('degree = scale length is exactly one octave up', () => {
+    expect(degreeToFreq(5, 'C', 'majorPentatonic')).toBeCloseTo(261.63, 1); // C4
+    expect(degreeToFreq(7, 'C', 'dorian')).toBeCloseTo(261.63, 1);
+  });
+
+  it('keeps climbing across octaves without wrapping', () => {
+    expect(degreeToFreq(10, 'C', 'majorPentatonic')).toBeCloseTo(523.25, 1); // C5
+    expect(degreeToFreq(12, 'C', 'majorPentatonic')).toBeCloseTo(659.25, 1); // E5 (midi 76)
+  });
+
+  it('applies the key offset', () => {
+    expect(degreeToFreq(0, 'D', 'majorPentatonic')).toBeCloseTo(146.83, 1); // D3
+  });
+
+  it('composes into quantize', () => {
+    expect(quantize(0.5, 'C', 'majorPentatonic')).toBeCloseTo(
+      degreeToFreq(radialToDegree(0.5, 'majorPentatonic'), 'C', 'majorPentatonic'),
+    );
   });
 });
