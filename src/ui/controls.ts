@@ -169,7 +169,7 @@ export function buildArpPanel(
   const volume = document.createElement('input');
   volume.type = 'range';
   volume.min = '-30';
-  volume.max = '0';
+  volume.max = '6';
   volume.step = '1';
   volume.value = '-10';
   volume.addEventListener('input', () => cb.onArpVolume(Number(volume.value)));
